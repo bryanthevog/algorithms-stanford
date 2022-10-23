@@ -97,10 +97,9 @@ std::vector<int> upper_slice(std::vector<int> &num, int index) {
 }
 // Extracts portion of vector from [index, end]
 std::vector<int> lower_slice(std::vector<int> &num, int index) {
-  std::raise(SIGTRAP);
   std::vector<int> tmp(num.size() - index, 0);
   for (int i = 0; i < (num.size() - index); i++) {
-    tmp[i] = num[i];
+    tmp[i] = num[num.size() - index + i];
   }
   return tmp;
 }
@@ -150,10 +149,22 @@ std::vector<int> karatsuba(std::vector<int> &num1, std::vector<int> &num2) {
     return basic_multiply(num1, num2);
   }
 
-  // Calculate the size of the numbers
-  int m = num1_size;
-  if (num2_size < num1_size) {
+  // Calculate the size of the numbers and pad smaller number
+  int m;
+  if (num1_size > num2_size) {
+    m = num1_size;
+    std::reverse(num2.begin(), num2.end());
+    for (int i = 0; i < num1_size - num2_size; i++) {
+      num2.push_back(0);
+    }
+    std::reverse(num2.begin(), num2.end());
+  } else {
     m = num2_size;
+    std::reverse(num1.begin(), num1.end());
+    for (int i = 0; i < num2_size - num1_size; i++) {
+      num1.push_back(0);
+    }
+    std::reverse(num1.begin(), num1.end());
   }
   int m2 = m / 2;
 
@@ -162,6 +173,7 @@ std::vector<int> karatsuba(std::vector<int> &num1, std::vector<int> &num2) {
   std::vector<int> lower1 = lower_slice(num1, m2);
   std::vector<int> upper2 = upper_slice(num2, m2);
   std::vector<int> lower2 = lower_slice(num2, m2);
+  // std::raise(SIGTRAP);
 
   // Recursive calls made to numbers ~half size of input
   std::vector<int> sum_1 = add_numbers(lower1, upper1);
@@ -179,12 +191,15 @@ std::vector<int> karatsuba(std::vector<int> &num1, std::vector<int> &num2) {
   }
   std::vector<int> part2 = subtract_numbers(z1, z2);
   std::vector<int> part2_2 = subtract_numbers(part2, z0);
-  std::vector<int> part2_padded(part2_2.size(), 0);
-  for (int i = 0; i < z2.size(); i++) {
+  std::vector<int> part2_padded(part2_2.size() + m2, 0);
+  for (int i = 0; i < part2_2.size(); i++) {
     part2_padded[i] = part2_2[i];
   }
   std::vector<int> parts_sum = add_numbers(part1, part2_padded);
   std::vector<int> parts_sum_2 = add_numbers(parts_sum, z0);
+  while (*parts_sum_2.begin() == 0) {
+    parts_sum_2.erase(parts_sum_2.begin());
+  }
   return parts_sum_2;
 }
 
@@ -298,10 +313,43 @@ TEST_CASE("Testing Karatsuba multiplication function") {
     CHECK(vector_to_string(karatsuba(num1_1, num2_1)) ==
           vector_to_string(product_1));
   }
+  SUBCASE("Test multiplying two numbers") {
+    std::vector<int> num1_1 = {1, 2, 7, 8};
+    std::vector<int> num2_1 = {3, 8, 1, 0};
+    std::vector<int> product_1 = {4, 8, 6, 9, 1, 8, 0};
+    CHECK(vector_to_string(karatsuba(num1_1, num2_1)) ==
+          vector_to_string(product_1));
+  }
+  SUBCASE("Test multiplying two numbers of different size") {
+    std::vector<int> num1_1 = {1, 2, 7, 8};
+    std::vector<int> num2_1 = {1, 2, 3};
+    std::vector<int> product_1 = {1, 5, 7, 1, 9, 4};
+    CHECK(vector_to_string(karatsuba(num1_1, num2_1)) ==
+          vector_to_string(product_1));
+  }
   SUBCASE("Test multiplying two large numbers") {
     std::vector<int> num1_1 = {1, 2, 7, 8, 4, 2, 1, 5};
     std::vector<int> num2_1 = {3, 8, 1, 0, 5, 6, 7, 1};
     std::vector<int> product_1 = {4, 8, 7, 1, 5, 1, 0, 9, 0, 7, 8, 3, 2, 6, 5};
+    CHECK(vector_to_string(karatsuba(num1_1, num2_1)) ==
+          vector_to_string(product_1));
+  }
+  SUBCASE("Test multiplying two massive numbers") {
+    std::vector<int> num1_1 = {3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3,
+                               2, 3, 8, 4, 6, 2, 6, 4, 3, 3, 8, 3, 2, 7, 9, 5,
+                               0, 2, 8, 8, 4, 1, 9, 7, 1, 6, 9, 3, 9, 9, 3, 7,
+                               5, 1, 0, 5, 8, 2, 0, 9, 7, 4, 9, 4, 4, 5, 9, 2};
+    std::vector<int> num2_1 = {2, 7, 1, 8, 2, 8, 1, 8, 2, 8, 4, 5, 9, 0, 4, 5,
+                               2, 3, 5, 3, 6, 0, 2, 8, 7, 4, 7, 1, 3, 5, 2, 6,
+                               6, 2, 4, 9, 7, 7, 5, 7, 2, 4, 7, 0, 9, 3, 6, 9,
+                               9, 9, 5, 9, 5, 7, 4, 9, 6, 6, 9, 6, 7, 6, 2, 7};
+    std::vector<int> product_1 = {
+        8, 5, 3, 9, 7, 3, 4, 2, 2, 2, 6, 7, 3, 5, 6, 7, 0, 6, 5, 4, 6, 3,
+        5, 5, 0, 8, 6, 9, 5, 4, 6, 5, 7, 4, 4, 9, 5, 0, 3, 4, 8, 8, 8, 5,
+        3, 5, 7, 6, 5, 1, 1, 4, 9, 6, 1, 8, 7, 9, 6, 0, 1, 1, 2, 7, 0, 6,
+        7, 7, 4, 3, 0, 4, 4, 8, 9, 3, 2, 0, 4, 8, 4, 8, 6, 1, 7, 8, 7, 5,
+        0, 7, 2, 2, 1, 6, 2, 4, 9, 0, 7, 3, 0, 1, 3, 3, 7, 4, 8, 9, 5, 8,
+        7, 1, 9, 5, 2, 8, 0, 6, 5, 8, 2, 7, 2, 3, 1, 8, 4};
     CHECK(vector_to_string(karatsuba(num1_1, num2_1)) ==
           vector_to_string(product_1));
   }
