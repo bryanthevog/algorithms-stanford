@@ -2,7 +2,8 @@
    multiplication algorithm. See:
    https://en.wikipedia.org/wiki/Karatsuba_algorithm
  */
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+// #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#define DOCTEST_CONFIG_DISABLE
 #include "doctest.h"
 #include <cmath>
 #include <csignal>
