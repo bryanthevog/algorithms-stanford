@@ -36,15 +36,33 @@ iterator select_first_pivot(iterator begin, iterator end) { return begin; }
 iterator select_last_pivot(iterator begin, iterator end) { return end - 1; }
 
 iterator select_median_pivot(iterator begin, iterator end) {
-  int size = std::distance(begin, end);
-  iterator middle = std::next(begin, size / 2);
+  long size = std::distance(begin, end);
+  // If there aren't 3 or more elements, return the first one
+  if (size < 3) {
+    return begin;
+  }
+  // Else find the median pivot
+  iterator middle = std::next(begin, (size - 1) / 2);
+  iterator last = std::next(end, -1);
   iterator pivot;
-  if ((*begin < *middle) && (*middle < *end)) {
-    pivot = middle;
-  } else if ((*middle < *begin) && (*begin < *end)) {
-    pivot = begin;
-  } else {
-    pivot = end;
+  if ((*begin < *middle) && (*begin < *last)) { // if begin is the smallest
+    if (*middle < *last) {
+      pivot = middle;
+    } else {
+      pivot = last;
+    }
+  } else if ((*last < *begin) && (*last < *middle)) { // if last is the smallest
+    if (*middle < *begin) {
+      pivot = middle;
+    } else {
+      pivot = begin;
+    }
+  } else { // if middle is the smallest
+    if (*begin < *last) {
+      pivot = begin;
+    } else {
+      pivot = last;
+    }
   }
   return pivot;
 }
@@ -58,7 +76,7 @@ iterator select_random_pivot(iterator begin, iterator end) {
   return pivot;
 }
 
-void partition(iterator begin, iterator end, iterator pivot) {
+iterator partition(iterator begin, iterator end, iterator pivot) {
   // Swap iterator value to the beginning of vector
   if (pivot != begin) {
     std::iter_swap(begin, pivot);
@@ -70,26 +88,31 @@ void partition(iterator begin, iterator end, iterator pivot) {
     if (*j < *begin) {
       std::iter_swap(i, j);
       i++;
-    } else {
-      std::iter_swap(i, j);
     }
   }
 
   // Swap pivot value into its rightful location
   std::iter_swap(begin, i - 1);
+  return i - 1;
 }
 
 unsigned long
 quicksort(iterator begin, iterator end,
           std::function<iterator(iterator, iterator)> select_pivot) {
-  if (begin == end) {
+  // Base case
+  if (std::distance(begin, end) < 2) {
     return 0;
   }
+
+  // Select pivot and partition around it
   iterator pivot = select_pivot(begin, end);
-  partition(begin, end, pivot);
+  pivot = partition(begin, end, pivot);
+
+  // Add to count and make recursive calls
   unsigned long count = std::distance(begin, end) - 1;
   count += quicksort(begin, pivot, select_pivot);
   count += quicksort(pivot + 1, end, select_pivot);
+
   return count;
 }
 
@@ -131,23 +154,157 @@ TEST_CASE("File reading test") {
         vector_to_string(test_vector));
 }
 
+TEST_CASE("Median pivot picking tests") {
+
+  SUBCASE("1, 2") {
+    vector<int> test_vector{1, 2};
+    int median = 1;
+    iterator pivot =
+        select_median_pivot(test_vector.begin(), test_vector.end());
+    CHECK(*pivot == median);
+  }
+
+  SUBCASE("2, 1") {
+    vector<int> test_vector{2, 1};
+    int median = 2;
+    iterator pivot =
+        select_median_pivot(test_vector.begin(), test_vector.end());
+    CHECK(*pivot == median);
+  }
+
+  SUBCASE("1, 2, 3") {
+    vector<int> test_vector{1, 2, 3};
+    int median = 2;
+    iterator pivot =
+        select_median_pivot(test_vector.begin(), test_vector.end());
+    CHECK(*pivot == median);
+  }
+
+  SUBCASE("2, 1, 3") {
+    vector<int> test_vector{2, 1, 3};
+    int median = 2;
+    iterator pivot =
+        select_median_pivot(test_vector.begin(), test_vector.end());
+    CHECK(*pivot == median);
+  }
+
+  SUBCASE("3, 1, 2") {
+    vector<int> test_vector{3, 1, 2};
+    int median = 2;
+    iterator pivot =
+        select_median_pivot(test_vector.begin(), test_vector.end());
+    CHECK(*pivot == median);
+  }
+
+  SUBCASE("1, 2, 3, 4") {
+    vector<int> test_vector{1, 2, 3, 4};
+    int median = 2;
+    iterator pivot =
+        select_median_pivot(test_vector.begin(), test_vector.end());
+    CHECK(*pivot == median);
+  }
+
+  SUBCASE("4, 1, 3, 2") {
+    vector<int> test_vector{4, 1, 3, 2};
+    int median = 2;
+    iterator pivot =
+        select_median_pivot(test_vector.begin(), test_vector.end());
+    CHECK(*pivot == median);
+  }
+
+  SUBCASE("4, 3, 1, 2") {
+    vector<int> test_vector{4, 3, 1, 2};
+    int median = 3;
+    iterator pivot =
+        select_median_pivot(test_vector.begin(), test_vector.end());
+    CHECK(*pivot == median);
+  }
+
+  SUBCASE("2, 1, 3, 4") {
+    vector<int> test_vector{2, 1, 3, 4};
+    int median = 2;
+    iterator pivot =
+        select_median_pivot(test_vector.begin(), test_vector.end());
+    CHECK(*pivot == median);
+  }
+}
+
 TEST_CASE("Test quicksort counting") {
-  SUBCASE("First element pivot") {
-    vector<int> test_vector{8, 3, 4, 5, 1, 7, 6, 2};
-    unsigned long comparisons = 21;
+  vector<int> sorted_vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  string large_integer_file = "input_dgrcode_16_100000.txt";
+  string xlarge_integer_file = "input_dgrcode_19_1000000.txt";
+
+  SUBCASE("First element pivot - basic") {
+    vector<int> test_vector{1, 6, 8, 10, 7, 5, 2, 9, 4, 3};
+    unsigned long comparisons = 26;
+    string method = "first";
+    CHECK(count_quicksort_comparisons(test_vector, method) == comparisons);
+    CHECK(vector_to_string(test_vector) == vector_to_string(sorted_vector));
+  }
+
+  SUBCASE("First element pivot - large vector") {
+    vector<int> test_vector = read_integer_file(large_integer_file);
+    unsigned long comparisons = 2127173;
     string method = "first";
     CHECK(count_quicksort_comparisons(test_vector, method) == comparisons);
   }
+
+  SUBCASE("First element pivot - xlarge vector") {
+    vector<int> test_vector = read_integer_file(xlarge_integer_file);
+    unsigned long comparisons = 25030219;
+    string method = "first";
+    CHECK(count_quicksort_comparisons(test_vector, method) == comparisons);
+  }
+
   SUBCASE("Last element pivot") {
-    vector<int> test_vector{8, 3, 4, 5, 1, 7, 6, 2};
+    vector<int> test_vector{1, 6, 8, 10, 7, 5, 2, 9, 4, 3};
     unsigned long comparisons = 21;
     string method = "last";
     CHECK(count_quicksort_comparisons(test_vector, method) == comparisons);
+    CHECK(vector_to_string(test_vector) == vector_to_string(sorted_vector));
   }
+
+  SUBCASE("Last element pivot - large vector") {
+    vector<int> test_vector = read_integer_file(large_integer_file);
+    unsigned long comparisons = 2079088;
+    string method = "last";
+    CHECK(count_quicksort_comparisons(test_vector, method) == comparisons);
+  }
+
+  SUBCASE("Last element pivot - xlarge vector") {
+    vector<int> test_vector = read_integer_file(xlarge_integer_file);
+    unsigned long comparisons = 23829985;
+    string method = "last";
+    CHECK(count_quicksort_comparisons(test_vector, method) == comparisons);
+  }
+
   SUBCASE("Median element pivot") {
-    vector<int> test_vector{8, 3, 4, 5, 1, 7, 6, 2};
-    unsigned long comparisons = 15;
+    vector<int> test_vector{1, 6, 8, 10, 7, 5, 2, 9, 4, 3};
+    unsigned long comparisons = 21;
     string method = "median";
     CHECK(count_quicksort_comparisons(test_vector, method) == comparisons);
+    CHECK(vector_to_string(test_vector) == vector_to_string(sorted_vector));
+  }
+
+  SUBCASE("Median element pivot - large vector") {
+    vector<int> test_vector = read_integer_file(large_integer_file);
+    unsigned long comparisons = 1749103;
+    string method = "median";
+    CHECK(count_quicksort_comparisons(test_vector, method) == comparisons);
+  }
+
+  SUBCASE("Median element pivot - xlarge vector") {
+    vector<int> test_vector = read_integer_file(xlarge_integer_file);
+    unsigned long comparisons = 21249115;
+    string method = "median";
+    CHECK(count_quicksort_comparisons(test_vector, method) == comparisons);
+  }
+
+  SUBCASE("Random element pivot") {
+    vector<int> test_vector{1, 6, 8, 10, 7, 5, 2, 9, 4, 3};
+    unsigned long comparisons = 55;
+    string method = "median";
+    CHECK_LE(count_quicksort_comparisons(test_vector, method), comparisons);
+    CHECK(vector_to_string(test_vector) == vector_to_string(sorted_vector));
   }
 }
