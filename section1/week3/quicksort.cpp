@@ -231,6 +231,8 @@ TEST_CASE("Median pivot picking tests") {
 
 TEST_CASE("Test quicksort counting") {
   vector<int> sorted_vector{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+  // https://github.com/beaunus/stanford-algs/tree/master/testCases/course1/assignment3Quicksort
   string large_integer_file = "input_dgrcode_16_100000.txt";
   string xlarge_integer_file = "input_dgrcode_19_1000000.txt";
 
