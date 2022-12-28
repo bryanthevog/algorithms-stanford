@@ -1,0 +1,6 @@
+Test-case  Answer  Notes
+test1.txt  2       Cuts are [(1,7), (4,5)]
+test2.txt  2       Cuts are [(1,7), (4,5)]
+test3.txt  1       Cuts are [(4,5)]
+test4.txt  1       Cuts are [(4,5)]
+test5.txt  3
